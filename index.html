@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Private WhatsApp Chat Viewer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #d1d7db;
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 600px;
+            background-color: #efeae2;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            background-color: #008069;
+            color: white;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            background-color: #dfe5e7;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            overflow: hidden;
+        }
+
+        .avatar svg {
+            width: 25px;
+            height: 25px;
+            fill: #fff;
+        }
+
+        .contact-info {
+            flex-grow: 1;
+        }
+
+        .contact-name {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .file-upload-label {
+            font-size: 12px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 10px;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        
+        .file-upload-label:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .chat-container {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+            background-repeat: repeat;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Instructions Card Styles */
+        .instructions-card {
+            background-color: #ffffff;
+            padding: 20px 25px;
+            border-radius: 10px;
+            box-shadow: 0 1px 0.5px rgba(11,20,26,.13);
+            margin: auto;
+            max-width: 95%;
+            color: #111b21;
+            font-size: 14.5px;
+            line-height: 1.6;
+        }
+
+        .instructions-card h3 {
+            color: #008069;
+            margin-bottom: 12px;
+            font-size: 18px;
+        }
+
+        .instructions-card ol {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .instructions-card li {
+            margin-bottom: 8px;
+        }
+
+        .instructions-card p {
+            font-size: 13px;
+            color: #54656f;
+            text-align: center;
+            margin-top: 15px;
+            border-top: 1px solid #e9edef;
+            padding-top: 15px;
+        }
+
+        /* Message Bubbles */
+        .message-row {
+            display: flex;
+            margin-bottom: 12px;
+            width: 100%;
+        }
+
+        .message-row.sent { justify-content: flex-end; }
+        .message-row.received { justify-content: flex-start; }
+        .message-row.system { justify-content: center; }
+
+        .message {
+            max-width: 75%;
+            padding: 6px 7px 8px 9px;
+            border-radius: 7px;
+            position: relative;
+            font-size: 14.2px;
+            line-height: 19px;
+            color: #111b21;
+            box-shadow: 0 1px 0.5px rgba(11,20,26,.13);
+        }
+
+        .message.sent { background-color: #d9fdd3; border-top-right-radius: 0; }
+        .message.received { background-color: #ffffff; border-top-left-radius: 0; }
+        
+        .message.system {
+            background-color: #ffeebd;
+            color: #54656f;
+            font-size: 12.5px;
+            border-radius: 10px;
+            padding: 5px 12px;
+            text-align: center;
+            box-shadow: 0 1px 0.5px rgba(11,20,26,.05);
+            max-width: 90%;
+        }
+
+        .time {
+            font-size: 11px;
+            color: #667781;
+            float: right;
+            margin-top: 5px;
+            margin-left: 15px;
+            line-height: 15px;
+        }
+
+        .media-content {
+            margin-bottom: 5px;
+        }
+        
+        .media-content img, .media-content video {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 5px;
+            display: block;
+        }
+
+        .media-omitted {
+            display: flex;
+            align-items: center;
+            color: #54656f;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="header">
+        <div class="avatar">
+            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        </div>
+        <div class="contact-info">
+            <div class="contact-name" id="contactName">No Chat Loaded</div>
+        </div>
+        <!-- Multiple is enabled to allow selecting the TXT and Media files together -->
+        <label class="file-upload-label" for="fileInput">Import Chat & Media</label>
+        <input type="file" id="fileInput" multiple accept=".txt, image/*, video/*">
+    </div>
+
+    <div class="chat-container" id="chatContainer">
+        <!-- Default Instructions Panel -->
+        <div class="instructions-card">
+            <h3>How to use this viewer:</h3>
+            <ol>
+                <li>Export a chat from WhatsApp (with or without media).</li>
+                <li>If the export is a <code>.zip</code> file, extract it to a folder on your computer.</li>
+                <li>Click the <strong>Import Chat & Media</strong> button at the top right.</li>
+                <li>Highlight the <code>.txt</code> file <strong>AND</strong> all the images/videos at the exact same time (you can drag to select or use <code>Ctrl+A</code> / <code>Cmd+A</code>) and click Open.</li>
+            </ol>
+            <p>🔒 <em>Your data remains completely private. Everything is processed locally on this device and is never uploaded to any server.</em></p>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('fileInput').addEventListener('change', async function(event) {
+        const files = Array.from(event.target.files);
+        const txtFile = files.find(f => f.name.endsWith('.txt'));
+
+        if (!txtFile) {
+            alert("Please select the exported WhatsApp .txt file.");
+            return;
+        }
+
+        const container = document.getElementById('chatContainer');
+        container.innerHTML = ''; 
+
+        const text = await txtFile.text();
+        const lines = text.split('\n');
+        
+        const msgRegex = /^(\d{2}\/\d{2}\/\d{4}),\s([\d:]+\s?[a-zA-Z\u202F]+)\s-\s(.*?):\s(.*)$/;
+        const sysRegex = /^(\d{2}\/\d{2}\/\d{4}),\s([\d:]+\s?[a-zA-Z\u202F]+)\s-\s(.*)$/;
+
+        let uniqueUsers = new Set();
+        let parsedMessages = [];
+
+        // First Pass: Scan the text to find the user names
+        lines.forEach(line => {
+            if (!line.trim()) return;
+            const msgMatch = line.match(msgRegex);
+            if (msgMatch) {
+                uniqueUsers.add(msgMatch[3]);
+                parsedMessages.push({ type: 'message', data: msgMatch });
+            } else {
+                const sysMatch = line.match(sysRegex);
+                if (sysMatch) {
+                    parsedMessages.push({ type: 'system', data: sysMatch });
+                } else {
+                    parsedMessages.push({ type: 'raw', data: line });
+                }
+            }
+        });
+
+        const usersArray = Array.from(uniqueUsers);
+        const mainUser = usersArray.length > 0 ? usersArray[0] : "Me";
+        const contactName = usersArray.length > 1 ? usersArray[1] : (usersArray[0] || "Unknown Contact");
+
+        document.getElementById('contactName').innerText = contactName;
+
+        // Second Pass: Render the chat
+        parsedMessages.forEach(item => {
+            let rowDiv = document.createElement('div');
+            rowDiv.classList.add('message-row');
+
+            let msgDiv = document.createElement('div');
+            msgDiv.classList.add('message');
+
+            if (item.type === 'message') {
+                const time = item.data[2];
+                const sender = item.data[3];
+                let content = item.data[4];
+                let innerHTML = '';
+
+                if (sender === mainUser) {
+                    rowDiv.classList.add('sent');
+                    msgDiv.classList.add('sent');
+                } else {
+                    rowDiv.classList.add('received');
+                    msgDiv.classList.add('received');
+                }
+
+                // Handle WhatsApp Media Tags
+                if (content.includes("(file attached)")) {
+                    // Clean up hidden Unicode characters WhatsApp sometimes inserts
+                    const cleanFilename = content.replace("(file attached)", "").replace(/[\u200E\u200F]/g, "").trim();
+                    
+                    // Search for the corresponding media file in the user's upload selection
+                    const mediaFile = files.find(f => f.name === cleanFilename);
+
+                    if (mediaFile) {
+                        // Create a temporary local URL for the browser to display
+                        const localUrl = URL.createObjectURL(mediaFile);
+                        if (mediaFile.type.startsWith('image/')) {
+                            innerHTML = `<div class="media-content"><img src="${localUrl}"></div>`;
+                        } else if (mediaFile.type.startsWith('video/')) {
+                            innerHTML = `<div class="media-content"><video controls src="${localUrl}"></video></div>`;
+                        } else {
+                            innerHTML = `<div class="media-omitted">📎 ${cleanFilename}</div>`;
+                        }
+                    } else {
+                        innerHTML = `<div class="media-omitted">📷 ${cleanFilename} (File not uploaded)</div>`;
+                    }
+                } else if (content.includes("<Media omitted>")) {
+                    innerHTML = `<div class="media-omitted">📷 Media omitted from export</div>`;
+                } else {
+                    innerHTML = content;
+                }
+
+                msgDiv.innerHTML = `${innerHTML} <span class="time">${time}</span>`;
+            } else if (item.type === 'system') {
+                rowDiv.classList.add('system');
+                msgDiv.classList.add('system');
+                msgDiv.innerHTML = `🔒 ${item.data[3]}`;
+            } else {
+                rowDiv.classList.add('system');
+                msgDiv.classList.add('system');
+                msgDiv.innerHTML = item.data;
+            }
+
+            rowDiv.appendChild(msgDiv);
+            container.appendChild(rowDiv);
+        });
+
+        container.scrollTop = container.scrollHeight;
+    });
+</script>
+</body>
+</html>
